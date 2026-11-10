@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Salle Premià - Lab Arcade 2º ESO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .pixel-font { font-family: 'Press Start 2P', monospace; }
+    body { font-family: 'Inter', sans-serif; background-color: #030a16; color: #fff; }
+    .arcade-bg {
+      background: radial-gradient(circle at center, #071933 0%, #020712 100%);
+    }
+    body.red-alert-mode {
+      background: radial-gradient(circle at center, #450a0a 0%, #0f0202 100%) !important;
+      animation: pulse-red 2s infinite alternate, glitch-screen 0.2s infinite alternate;
+    }
+    @keyframes pulse-red {
+      0% { box-shadow: inset 0 0 50px rgba(255, 0, 0, 0.4); }
+      100% { box-shadow: inset 0 0 100px rgba(255, 0, 0, 0.9); }
+    }
+    @keyframes glitch-screen {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-1px, 1px); }
+      40% { transform: translate(1px, -1px); }
+      60% { transform: translate(-1px, 0); }
+      80% { transform: translate(1px, 1px); }
+      100% { transform: translate(0, 0); }
+    }
+    .pixel-box {
+      border: 4px solid #ffcc00;
+      box-shadow: 0 0 20px rgba(255, 204, 0, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.7);
+      background-color: rgba(6, 26, 56, 0.95);
+    }
+    .pixel-box-red {
+      border: 4px solid #ff2222;
+      box-shadow: 0 0 30px rgba(255, 0, 0, 0.7), inset 0 0 20px rgba(0, 0, 0, 0.8);
+      background-color: rgba(45, 10, 10, 0.95);
+    }
+    .pixel-btn {
+      border: 2px solid #ffcc00;
+      box-shadow: 0 4px 0 #b38f00;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .pixel-btn:hover {
+      border-color: #ffffff;
+      box-shadow: 0 0 15px #ffcc00, 0 4px 0 #b38f00;
+    }
+    .pixel-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #b38f00;
+    }
+    canvas { image-rendering: pixelated; }
+    
+    .element-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .element-card:hover {
+      transform: translateY(-4px) scale(1.08);
+      border-color: #ffe600 !important;
+      box-shadow: 0 0 20px #ffe600, 0 0 40px rgba(255, 230, 0, 0.5);
+      z-index: 30;
+    }
+
+    @keyframes spin-star {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.3); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+    .star-spin-anim {
+      animation: spin-star 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cat-no-metal { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-gas-noble { background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-alcalino { background: linear-gradient(135deg, #ff4d4d 0%, #dc2626 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-alcalinoterreo { background: linear-gradient(135deg, #ff8c00 0%, #ea580c 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-metaloide { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-halogeno { background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%); color: #000000; font-weight: bold; }
+    .cat-transicion { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .cat-otros-metales { background: linear-gradient(135deg, #94a3b8 0%, #475569 100%); color: #ffffff; text-shadow: 0 1px 2px #000; }
+  </style>
+</head>
+<body class="arcade-bg min-h-screen flex flex-col items-center p-2 sm:p-4 select-none relative overflow-x-hidden">
+
+  <!-- CANVAS FLOTANTE PARA PARTÍCULAS DORADAS / ROJAS -->
+  <canvas id="fxCanvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+  <!-- CABECERA INSTITUCIONAL Y TÍTULO -->
+  <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-center bg-[#051733] border-b-4 border-[#ffcc00] p-3 rounded-lg shadow-2xl mb-4 gap-3 relative z-10">
+    <div class="flex items-center gap-3">
+      <button id="star-btn" onclick="handleStarClick(event)" title="La Salle Premià (Haz clic para efecto)" class="focus:outline-none relative cursor-pointer group p-1">
+        <svg id="star-svg" class="w-10 h-10 text-yellow-400 drop-shadow-[0_0_12px_rgba(255,204,0,1)] transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </button>
+
+      <!-- ESTRELLA ROJA SECRETA DESBLOQUEABLE -->
+      <button id="red-star-btn" onclick="handleRedStarClick(event)" title="Estrella Roja de La Salle" class="focus:outline-none relative cursor-pointer group p-1 hidden">
+        <svg id="red-star-svg" class="w-10 h-10 text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,1)] transition-transform group-hover:scale-125 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </button>
+
+      <div>
+        <h1 class="pixel-font text-xs sm:text-lg text-yellow-400 tracking-wider">LA SALLE PREMIÀ DE MAR</h1>
+        <p class="text-xs text-cyan-300 font-bold tracking-wide">Física i Química • 2º ESO</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-mono">
+      <div id="anti-ai-badge" class="hidden bg-gradient-to-r from-yellow-500 to-amber-600 px-3 py-1.5 rounded-lg border border-yellow-300 text-black font-extrabold flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,204,0,0.8)] animate-pulse">
+        <span>🥇</span>
+        <span class="text-[10px] tracking-wider">ANTI-IA MASTER</span>
+      </div>
+
+      <div class="bg-[#020b18] px-3 py-1.5 rounded-lg border-2 border-yellow-400 shadow-[0_0_10px_rgba(255,204,0,0.3)] flex items-center gap-1">
+        <span class="text-gray-400" id="lbl-score">PUNTOS:</span>
+        <span id="score-display" class="text-yellow-400 font-bold ml-1 text-base">0</span>
+      </div>
+
+      <button id="lang-toggle" onclick="toggleLanguage()" class="pixel-btn bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1">
+        🌐 <span id="lang-text">ES ➔ CA</span>
+      </button>
+
+      <button id="sound-toggle" onclick="toggleAudio()" class="pixel-btn bg-blue-900 hover:bg-blue-800 text-yellow-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+        🔊 AUDIO: ON
+      </button>
+    </div>
+  </header>
+
+  <!-- PANELES DE NAVEGACIÓN -->
+  <nav class="w-full max-w-6xl flex flex-wrap gap-2 justify-center mb-4 text-xs sm:text-sm relative z-10">
+    <button onclick="switchTab('explorer')" id="btn-tab-explorer" class="tab-btn pixel-btn px-4 py-2.5 bg-yellow-400 text-blue-950 font-extrabold rounded-lg">
+      🔍 TABLA 2º ESO
+    </button>
+    <button onclick="switchTab('calculator')" id="btn-tab-calculator" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      🧪 ENSAMBLADOR (Masa u)
+    </button>
+    <button onclick="switchTab('speedmath')" id="btn-tab-speedmath" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      🧮 MINIJUEGO CÁLCULO (.000)
+    </button>
+    <button onclick="switchTab('symbolname')" id="btn-tab-symbolname" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      🔤 SÍMBOLO ↔ NOMBRE
+    </button>
+    <button onclick="switchTab('bonds')" id="btn-tab-bonds" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      🔗 TIPOS DE ENLACE
+    </button>
+    <button onclick="switchTab('theory')" id="btn-tab-theory" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      📖 TEORÍA 2º ESO
+    </button>
+    <button onclick="switchTab('quiz')" id="btn-tab-quiz" class="tab-btn pixel-btn px-4 py-2.5 bg-blue-950 text-white hover:bg-blue-900 font-extrabold rounded-lg">
+      📝 QUIZ EXAMEN
+    </button>
+  </nav>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="w-full max-w-6xl flex-1 flex flex-col items-center relative z-10">
+
+    <!-- PESTAÑA 1: EXPLORADOR -->
+    <div id="tab-explorer" class="w-full flex flex-col items-center">
+      <div class="mb-3 text-center">
+        <p class="text-xs sm:text-sm text-cyan-200">
+          Haz clic o pasa el ratón por los <strong>34 elementos clave</strong> de 2º ESO para ver su ficha.
+        </p>
+      </div>
+
+      <div class="w-full bg-[#051733] border-2 border-yellow-400 p-3 rounded-xl mb-3 flex flex-col md:flex-row justify-between items-center gap-3 shadow-lg">
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <span class="text-xs font-mono text-yellow-400 font-bold whitespace-nowrap">📊 ORDEN:</span>
+          <select id="filter-sort" onchange="applyPeriodicFilters()" class="bg-[#020b18] text-cyan-200 text-xs font-mono p-2 rounded border border-blue-700 focus:outline-none focus:border-yellow-400 w-full md:w-auto">
+            <option value="asc">Del 1º al último (Nº Atómico 1 ➔ 82)</option>
+            <option value="desc">Del último al 1º (Nº Atómico 82 ➔ 1)</option>
+            <option value="name">Por Nombre (A ➔ Z)</option>
+            <option value="mass">Por Masa Atómica (Menor ➔ Mayor)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <span class="text-xs font-mono text-yellow-400 font-bold whitespace-nowrap">🧪 FAMILIA:</span>
+          <select id="filter-cat" onchange="applyPeriodicFilters()" class="bg-[#020b18] text-cyan-200 text-xs font-mono p-2 rounded border border-blue-700 focus:outline-none focus:border-yellow-400 w-full md:w-auto">
+            <option value="all">Todas las familias</option>
+            <option value="no-metal">No Metales</option>
+            <option value="gas-noble">Gases Nobles</option>
+            <option value="alcalino">Alcalinos</option>
+            <option value="alcalinoterreo">Alcalinotérreos</option>
+            <option value="metaloide">Metaloides</option>
+            <option value="halogeno">Halógenos</option>
+            <option value="transicion">Metales de Transición</option>
+            <option value="otros-metales">Otros Metales</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono text-yellow-400 font-bold whitespace-nowrap">👁️ MODO:</span>
+          <button id="filter-mode-btn" onclick="toggleFilterHideMode()" class="pixel-btn px-3 py-1.5 text-xs font-mono font-bold bg-blue-900 text-white rounded hover:bg-blue-800">
+            RESALTAR FAMILIA
+          </button>
+        </div>
+      </div>
+
+      <div id="periodic-table-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-2.5 w-full mb-4 p-4 bg-[#031126] rounded-xl border-2 border-blue-800 shadow-2xl">
+      </div>
+
+      <div id="element-detail-card" class="w-full pixel-box p-5 rounded-xl hidden">
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: ENSAMBLADOR -->
+    <div id="tab-calculator" class="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 hidden">
+      <div class="lg:col-span-6 bg-[#031126] border-2 border-blue-700 p-4 rounded-xl shadow-xl">
+        <h3 class="pixel-font text-xs text-yellow-400 mb-3 uppercase">1. SELECCIONA ÁTOMOS (IZQUIERDA)</h3>
+        <div id="calculator-element-selector" class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[480px] overflow-y-auto pr-1">
+        </div>
+      </div>
+
+      <div class="lg:col-span-6 flex flex-col gap-3">
+        <div class="pixel-box p-4 rounded-xl flex-1 bg-[#020e21]">
+          <h3 class="pixel-font text-xs sm:text-sm text-yellow-400 mb-2">2. REACCIÓN Y SUMA DE MASA (DERECHA)</h3>
+          <p class="text-xs text-cyan-200 mb-3">Compuesto en formación e historial de la masa molecular en unidades u:</p>
+
+          <div class="bg-[#010814] border-2 border-yellow-400 rounded-lg p-3 mb-3 min-h-[90px] flex flex-col justify-between">
+            <div id="flask-atoms-container" class="flex flex-wrap gap-2 items-center">
+              <span class="text-xs text-gray-500 italic">El matraz está vacío. Añade elementos desde la izquierda...</span>
+            </div>
+            <div class="flex justify-end mt-2">
+              <button onclick="clearFlask()" class="pixel-btn px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg">
+                VACIAR MATRAZ
+              </button>
+            </div>
+          </div>
+
+          <div id="molecular-mass-result" class="bg-[#051a3a] border-2 border-cyan-400 p-3.5 rounded-lg text-xs sm:text-sm text-cyan-100 font-mono leading-relaxed">
+            Masa Molecular Total: <strong class="text-yellow-400 text-lg">0 u</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 3: MINIJUEGO CÁLCULO -->
+    <div id="tab-speedmath" class="w-full flex flex-col items-center max-w-3xl hidden">
+      <h2 class="pixel-font text-sm sm:text-lg text-yellow-400 mb-3 text-center">🧮 MINIJUEGO: CÁLCULO DE MASA REDONDEADA A MILES (.000)</h2>
+
+      <div class="w-full pixel-box p-4 sm:p-5 rounded-xl mb-4 bg-[#020e21] text-xs sm:text-sm text-cyan-100">
+        <h3 class="pixel-font text-xs text-yellow-300 mb-2">📜 REGLAS Y FUNCIONAMIENTO DEL REDONDEO:</h3>
+        <ul class="list-disc list-inside space-y-1.5 font-mono text-xs">
+          <li>La parte decimal se redondea a miles cerrados (3 ceros al final).</li>
+          <li>Si los decimales son menores a 500 (ej. <strong>38,365 u</strong>), se redondea hacia abajo: <strong>38.000</strong>.</li>
+          <li>Si los decimales son 500 o mayores (ej. <strong>46,500 u</strong>), se redondea hacia arriba: <strong>47.000</strong>.</li>
+          <li>Multiplica la masa atómica por el número de átomos, suma el total y redondéalo en miles.</li>
+        </ul>
+      </div>
+
+      <div class="w-full pixel-box p-6 rounded-xl text-center flex flex-col items-center bg-[#020e21]">
+        <span class="text-xs text-cyan-300 font-mono tracking-widest uppercase mb-1">RETO DE CÁLCULO DE MASA MOLECULAR</span>
+
+        <div id="speedmath-formula" class="pixel-font text-3xl sm:text-4xl text-yellow-300 my-2">H₂O</div>
+
+        <div id="speedmath-details" class="text-xs font-mono text-cyan-200 bg-[#00142d] p-3.5 rounded-lg border border-cyan-500/40 w-full max-w-md my-2 text-left space-y-1.5 shadow-inner">
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md justify-center items-center mt-3">
+          <input type="number" id="speedmath-user-input" placeholder="Escribe el total en miles (ej: 18000)..." autocomplete="off" class="px-4 py-2.5 text-base sm:text-lg rounded-lg bg-[#010814] border-2 border-yellow-400 text-white font-mono w-full focus:outline-none text-center">
+          <button onclick="checkSpeedMathAnswer()" class="pixel-btn px-6 py-2.5 text-base font-bold bg-yellow-400 text-blue-950 w-full sm:w-auto hover:bg-yellow-300">
+            COMPROBAR
+          </button>
+        </div>
+
+        <div id="speedmath-feedback" class="mt-3 text-sm sm:text-base font-bold h-6"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 4: SÍMBOLO ↔ NOMBRE -->
+    <div id="tab-symbolname" class="w-full flex flex-col items-center max-w-3xl hidden">
+      <h2 class="pixel-font text-sm sm:text-lg text-yellow-400 mb-3 text-center">🔤 RETO: SÍMBOLO ↔ NOMBRE QUÍMICO</h2>
+      
+      <div class="w-full pixel-box p-6 rounded-xl text-center flex flex-col items-center bg-[#020e21]">
+        <span id="sn-prompt-title" class="text-xs text-cyan-300 font-mono tracking-widest uppercase mb-2">¿CUÁL ES EL NOMBRE DE ESTE ELEMENTO?</span>
+
+        <div id="sn-card-display" class="w-32 h-32 my-3 rounded-xl flex flex-col items-center justify-center font-mono border-4 border-yellow-400 shadow-[0_0_25px_rgba(255,204,0,0.5)] transition-all bg-[#051a3a]">
+          <span id="sn-card-num" class="text-xs opacity-80">1</span>
+          <span id="sn-card-main" class="pixel-font text-3xl sm:text-4xl text-yellow-300">H</span>
+          <span id="sn-card-sub" class="text-xs text-cyan-200 mt-1">Nº Atómico</span>
+        </div>
+
+        <div id="sn-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md mt-4">
+        </div>
+
+        <div id="sn-feedback" class="mt-3 text-sm sm:text-base font-bold h-6"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 5: RETO TIPOS DE ENLACE QUÍMICO -->
+    <div id="tab-bonds" class="w-full flex flex-col items-center max-w-3xl hidden">
+      <h2 class="pixel-font text-sm sm:text-lg text-yellow-400 mb-3 text-center">🔗 RETO: ENLACES QUÍMICOS</h2>
+      <p class="text-xs sm:text-sm text-cyan-200 mb-4 text-center">
+        Identifica qué tipo de enlace mantiene unida la sustancia propuesta.
+      </p>
+
+      <div class="w-full pixel-box p-6 rounded-xl text-center flex flex-col items-center bg-[#020e21] shadow-2xl">
+        <span id="bond-question-num" class="text-xs text-yellow-400 font-mono tracking-widest block mb-1">PREGUNTA 1 DE 10</span>
+        
+        <div class="bg-[#051a3a] border-2 border-yellow-400 p-4 rounded-xl my-3 w-full max-w-md shadow-lg">
+          <div id="bond-formula" class="pixel-font text-3xl sm:text-4xl text-yellow-300 mb-1">NaCl</div>
+          <div id="bond-name" class="text-sm sm:text-base text-cyan-200 font-mono">Cloruro de sodio (Sal común)</div>
+        </div>
+
+        <button id="hint-btn-bond" onclick="useHint('bonds')" class="pixel-btn px-4 py-1.5 mb-2 text-xs font-bold bg-purple-900 text-yellow-300 rounded-lg border border-yellow-400 hidden hover:bg-purple-800">
+          💡 PISTA SALLE (10.000+ PTS)
+        </button>
+
+        <p class="text-xs sm:text-sm text-cyan-300 mb-4 font-mono">¿Qué tipo de enlace o interacción une a esta sustancia?</p>
+
+        <div id="bond-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
+          <button onclick="checkBondAnswer('iónico')" class="pixel-btn p-3 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-lg">
+            ⚡ Enlace Iónico
+          </button>
+          <button onclick="checkBondAnswer('covalente')" class="pixel-btn p-3 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-lg">
+            🤝 Enlace Covalente
+          </button>
+          <button onclick="checkBondAnswer('metálico')" class="pixel-btn p-3 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-lg">
+            🛡️ Enlace Metálico
+          </button>
+          <button onclick="checkBondAnswer('puente de hidrógeno')" class="pixel-btn p-3 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-lg">
+            💧 Puente de Hidrógeno
+          </button>
+        </div>
+
+        <div id="bond-explanation" class="mt-4 p-4 bg-[#010a18] border-2 border-cyan-500 rounded-lg text-xs sm:text-sm text-cyan-100 text-left w-full max-w-md hidden">
+        </div>
+
+        <button id="bond-next-btn" onclick="loadNextBondQuestion()" class="mt-4 pixel-btn px-6 py-2.5 bg-yellow-400 text-blue-950 font-bold text-sm rounded-lg hidden">
+          SIGUIENTE PREGUNTA ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 6: TEORÍA DE 2º ESO -->
+    <div id="tab-theory" class="w-full flex flex-col items-center max-w-4xl hidden">
+      <h2 class="pixel-font text-sm sm:text-lg text-yellow-400 mb-4 text-center">📖 CHULETA DE TEORÍA • FÍSICA I QUÍMICA 2º ESO</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        <div class="pixel-box p-5 rounded-xl bg-[#020e21]">
+          <h3 class="pixel-font text-xs sm:text-sm text-yellow-300 mb-2 flex items-center gap-2">
+            <span>✨</span> 1. LA REGLA DEL OCTETO
+          </h3>
+          <p class="text-xs text-cyan-100 leading-relaxed mb-2">
+            Los átomos buscan estar <strong>estables</strong> completando su última capa de electrones con <strong>8 electrones</strong> (como los <em>Gases Nobles</em>).
+          </p>
+          <div class="bg-[#00142d] p-3 rounded border border-cyan-500/50 text-xs font-mono text-cyan-200">
+            • <strong>Metal + No Metal:</strong> El metal CEDE electrones y el no metal los GANA (Enlace Iónico).<br/>
+            • <strong>No Metal + No Metal:</strong> COMPARTEN parejas de electrones (Enlace Covalente).<br/>
+            • <em>Excepción:</em> El Hidrógeno (H) se estabiliza con 2 electrones.
+          </div>
+        </div>
+
+        <div class="pixel-box p-5 rounded-xl bg-[#020e21]">
+          <h3 class="pixel-font text-xs sm:text-sm text-yellow-300 mb-2 flex items-center gap-2">
+            <span>🔗</span> 2. LOS 4 TIPOS DE ENLACE
+          </h3>
+          <ul class="text-xs text-cyan-100 space-y-1.5 leading-relaxed">
+            <li>⚡ <strong>Iónico:</strong> Metal + No Metal (ej. NaCl).</li>
+            <li>🤝 <strong>Covalente:</strong> No Metal + No Metal (ej. H₂O, CO₂).</li>
+            <li>🛡️ <strong>Metálico:</strong> Metal + Metal (ej. Fe, Cu).</li>
+            <li>💧 <strong>Puente de Hidrógeno:</strong> Interacción electrostática entre moléculas con H unido a (O, N, F).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 7: QUIZ EXAMEN REDISEÑADO ATRACTIVO -->
+    <div id="tab-quiz" class="w-full flex flex-col items-center max-w-4xl hidden">
+      <div class="w-full pixel-box p-6 sm:p-10 rounded-2xl text-center shadow-[0_0_50px_rgba(0,180,255,0.25)] flex flex-col items-center bg-gradient-to-b from-[#051c3d] to-[#020c1d] border-4 border-yellow-400 relative overflow-hidden">
+        
+        <div class="w-full max-w-md bg-blue-950/80 rounded-full h-3 mb-6 border border-yellow-400/50 p-0.5 shadow-inner">
+          <div id="quiz-progress-bar" class="bg-gradient-to-r from-yellow-400 to-amber-500 h-full rounded-full transition-all duration-300 w-1/10 shadow-[0_0_10px_#ffcc00]"></div>
+        </div>
+
+        <div class="flex items-center gap-2 mb-2">
+          <span class="px-3 py-1 bg-yellow-400 text-blue-950 font-extrabold text-xs rounded-full uppercase tracking-wider shadow-md">DESAFÍO EXAMEN</span>
+          <span id="quiz-question-num" class="text-xs sm:text-sm text-yellow-400 font-mono font-bold tracking-widest">PREGUNTA 1 DE 10</span>
+        </div>
+
+        <div class="w-full max-w-2xl bg-[#010916]/80 border-2 border-cyan-400/40 p-6 rounded-xl my-4 shadow-xl">
+          <h3 id="quiz-question-text" class="pixel-font text-base sm:text-xl text-white leading-relaxed tracking-wide">
+            ¿Cargando pregunta del Examen de 2º ESO...?
+          </h3>
+        </div>
+
+        <div id="quiz-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+        </div>
+
+        <div id="quiz-feedback" class="mt-6 text-base sm:text-lg font-bold h-8"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 8: ALERTA ROJA (EXAMEN FINAL 100K) -->
+    <div id="tab-finalred" class="w-full flex flex-col items-center max-w-4xl hidden">
+      <div id="red-exam-box" class="w-full pixel-box-red p-6 sm:p-10 rounded-xl text-center shadow-2xl flex flex-col items-center relative z-20">
+        <div class="flex flex-col sm:flex-row justify-between items-center w-full mb-4 pb-3 border-b-2 border-red-700 gap-2">
+          <span class="pixel-font text-xs sm:text-sm text-red-400">🔥 EXAMEN FINAL 180S</span>
+          <div class="bg-black/80 px-4 py-2 rounded-lg border border-red-500 flex items-center gap-2">
+            <span class="text-xs text-gray-300 font-mono">TIEMPO RESTANTE:</span>
+            <span id="red-timer-display" class="pixel-font text-xl text-red-500 animate-pulse">180s</span>
+          </div>
+        </div>
+
+        <span id="red-quiz-num" class="text-xs text-yellow-400 font-mono tracking-widest block mb-2">PREGUNTA HARDCORE 1</span>
+
+        <h3 id="red-quiz-question-text" class="pixel-font text-sm sm:text-lg text-white mb-6 leading-relaxed">
+          ¿Cargando pregunta de máxima dificultad...?
+        </h3>
+
+        <div id="red-quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+        </div>
+
+        <div id="red-quiz-feedback" class="mt-6 text-base font-bold h-8"></div>
+
+        <!-- RESULTADO DEL EXAMEN ROJO -->
+        <div id="red-exam-results" class="w-full mt-4 p-6 bg-black/90 border-4 border-red-600 rounded-xl flex flex-col items-center hidden">
+          <div id="red-result-icon" class="text-6xl mb-3">🏆</div>
+          <h3 id="red-result-title" class="pixel-font text-xl text-yellow-300 mb-2">¡RESULTADO DEL EXAMEN!</h3>
+          <p id="red-result-score" class="pixel-font text-2xl text-red-400 mb-4">NOTA: 10 / 10 (100%)</p>
+          <p id="red-result-msg" class="text-sm font-mono text-cyan-200 mb-6 text-center max-w-md">
+            ¡Felicidades! Has superado el reto de máxima dificultad.
+          </p>
+          <button id="red-result-btn" onclick="finishRedExamFlow()" class="pixel-btn px-8 py-3 bg-yellow-400 text-blue-950 font-extrabold text-sm rounded-lg hover:bg-yellow-300">
+            CONTINUAR
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="mt-6 text-center text-xs text-cyan-400/80 font-mono relative z-10">
+    © La Salle Premià de Mar • Departament de Ciències - Física i Química 2º ESO
+  </footer>
+
+  <!-- CARITA CASI INVISIBLE AL PIE DE PÁGINA (EASTER EGG) -->
+  <div id="creepy-smile" class="fixed bottom-1 right-2 text-[10px] text-gray-900/30 select-none pointer-events-none font-mono">
+    :)
+  </div>
+
+  <script>
+    const ELEMENTS = [
+      { z: 1, sym: 'H', name: 'Hidrógeno', nameCa: 'Hidrogen', mass: 1.008, cat: 'no-metal' },
+      { z: 2, sym: 'He', name: 'Helio', nameCa: 'Heli', mass: 4.003, cat: 'gas-noble' },
+      { z: 3, sym: 'Li', name: 'Litio', nameCa: 'Liti', mass: 6.941, cat: 'alcalino' },
+      { z: 4, sym: 'Be', name: 'Berilio', nameCa: 'Beril·li', mass: 9.012, cat: 'alcalinoterreo' },
+      { z: 5, sym: 'B', name: 'Boro', nameCa: 'Bor', mass: 10.81, cat: 'metaloide' },
+      { z: 6, sym: 'C', name: 'Carbono', nameCa: 'Carboni', mass: 12.01, cat: 'no-metal' },
+      { z: 7, sym: 'N', name: 'Nitrógeno', nameCa: 'Nitrogen', mass: 14.01, cat: 'no-metal' },
+      { z: 8, sym: 'O', name: 'Oxígeno', nameCa: 'Oxigen', mass: 16.00, cat: 'no-metal' },
+      { z: 9, sym: 'F', name: 'Flúor', nameCa: 'Flúor', mass: 19.00, cat: 'halogeno' },
+      { z: 10, sym: 'Ne', name: 'Neón', nameCa: 'Neó', mass: 20.18, cat: 'gas-noble' },
+      { z: 11, sym: 'Na', name: 'Sodio', nameCa: 'Sodi', mass: 22.99, cat: 'alcalino' },
+      { z: 12, sym: 'Mg', name: 'Magnesio', nameCa: 'Magnesi', mass: 24.31, cat: 'alcalinoterreo' },
+      { z: 13, sym: 'Al', name: 'Aluminio', nameCa: 'Alumini', mass: 26.98, cat: 'otros-metales' },
+      { z: 14, sym: 'Si', name: 'Silicio', nameCa: 'Silici', mass: 28.09, cat: 'metaloide' },
+      { z: 15, sym: 'P', name: 'Fósforo', nameCa: 'Fòsfor', mass: 30.97, cat: 'no-metal' },
+      { z: 16, sym: 'S', name: 'Azufre', nameCa: 'Sofre', mass: 32.06, cat: 'no-metal' },
+      { z: 17, sym: 'Cl', name: 'Cloro', nameCa: 'Clor', mass: 35.45, cat: 'halogeno' },
+      { z: 18, sym: 'Ar', name: 'Argón', nameCa: 'Argó', mass: 39.95, cat: 'gas-noble' },
+      { z: 19, sym: 'K', name: 'Potasio', nameCa: 'Potassi', mass: 39.10, cat: 'alcalino' },
+      { z: 20, sym: 'Ca', name: 'Calcio', nameCa: 'Calci', mass: 40.08, cat: 'alcalinoterreo' },
+      { z: 26, sym: 'Fe', name: 'Hierro', nameCa: 'Ferro', mass: 55.85, cat: 'transicion' },
+      { z: 29, sym: 'Cu', name: 'Cobre', nameCa: 'Coure', mass: 63.55, cat: 'transicion' },
+      { z: 30, sym: 'Zn', name: 'Zinc', nameCa: 'Zinc', mass: 65.38, cat: 'transicion' },
+      { z: 35, sym: 'Br', name: 'Bromo', nameCa: 'Brom', mass: 79.90, cat: 'halogeno' },
+      { z: 36, sym: 'Kr', name: 'Kriptón', nameCa: 'Criptó', mass: 83.80, cat: 'gas-noble' },
+      { z: 47, sym: 'Ag', name: 'Plata', nameCa: 'Plata', mass: 107.87, cat: 'transicion' },
+      { z: 50, sym: 'Sn', name: 'Estaño', nameCa: 'Stany', mass: 118.71, cat: 'otros-metales' },
+      { z: 53, sym: 'I', name: 'Yodo', nameCa: 'Iode', mass: 126.90, cat: 'halogeno' },
+      { z: 54, sym: 'Xe', name: 'Xenón', nameCa: 'Xenó', mass: 131.29, cat: 'gas-noble' },
+      { z: 79, sym: 'Au', name: 'Oro', nameCa: 'Or', mass: 196.97, cat: 'transicion' },
+      { z: 80, sym: 'Hg', name: 'Mercurio', nameCa: 'Mercuri', mass: 200.59, cat: 'transicion' },
+      { z: 82, sym: 'Pb', name: 'Plomo', nameCa: 'Plom', mass: 207.2, cat: 'otros-metales' }
+    ];
+
+    const QUIZ_QUESTIONS = [
+      { q: "¿Cuál es la partícula subatómica con carga positiva?", options: ["Protón", "Electrón", "Neutrón", "Fotón"], correct: 0 },
+      { q: "¿Qué tipo de enlace se forma entre un metal y un no metal?", options: ["Enlace Covalente", "Enlace Iónico", "Enlace Metálico", "Puente de Hidrógeno"], correct: 1 },
+      { q: "¿Qué gas noble tiene Z = 2?", options: ["Neón", "Helio", "Argón", "Kriptón"], correct: 1 },
+      { q: "¿Cuál es la masa atómica aproximada del Carbono (C)?", options: ["1 u", "12 u", "16 u", "32 u"], correct: 1 },
+      { q: "¿Qué elemento tiene por símbolo 'K'?", options: ["Kriptón", "Potasio", "Calcio", "Cobre"], correct: 1 },
+      { q: "¿Qué partículas se encuentran en el núcleo del átomo?", options: ["Protones y Electrones", "Electrones y Neutrones", "Protones y Neutrones", "Solo Electrones"], correct: 2 },
+      { q: "¿Cuál es la masa atómica del Oxígeno (O)?", options: ["1.008 u", "12.01 u", "16.00 u", "35.45 u"], correct: 2 },
+      { q: "¿Qué regla establece que los átomos buscan 8 electrones en su última capa?", options: ["Regla del Octeto", "Ley de Lavoisier", "Regla del Dúo", "Principio de Exclusión"], correct: 0 },
+      { q: "¿Qué enlace comparten parejas de electrones entre no metales?", options: ["Enlace Iónico", "Enlace Covalente", "Enlace Metálico", "Fuerza Nuclear"], correct: 1 },
+      { q: "¿En qué unidad se mide la Masa Molar (M)?", options: ["Unidades (u)", "Gramos por mol (g/mol)", "Kilogramos (kg)", "Moles (mol)"], correct: 1 }
+    ];
+
+    const SPEEDMATH_PROBLEMS = [
+      { formula: "H₂O", name: "Agua", elements: [{ sym: "H", count: 2, mass: 1.008 }, { sym: "O", count: 1, mass: 15.999 }], rounded: 18000 },
+      { formula: "CO₂", name: "Dióxido de Carbono", elements: [{ sym: "C", count: 1, mass: 12.011 }, { sym: "O", count: 2, mass: 15.999 }], rounded: 44000 },
+      { formula: "NaCl", name: "Cloruro de Sodio", elements: [{ sym: "Na", count: 1, mass: 22.990 }, { sym: "Cl", count: 1, mass: 35.453 }], rounded: 58000 },
+      { formula: "CH₄", name: "Metano", elements: [{ sym: "C", count: 1, mass: 12.011 }, { sym: "H", count: 4, mass: 1.008 }], rounded: 16000 }
+    ];
+
+    const RED_EXAM_QUESTIONS = [
+      { q: "¿Cuál es la masa molar aproximada del Ácido Sulfúrico (H₂SO₄)? (H=1, S=32, O=16)", options: ["98 g/mol", "49 g/mol", "64 g/mol", "100 g/mol"], correct: 0 },
+      { q: "¿Qué pareja de elementos forma un Enlace Covalente?", options: ["Na y Cl", "Fe y Cu", "H y O", "K y F"], correct: 2 },
+      { q: "¿Cuántos electrones de valencia busca la Regla del Octeto para lograr estabilidad?", options: ["2", "6", "8", "10"], correct: 2 },
+      { q: "¿Cuál de estos elementos es un Halógeno?", options: ["Cloro (Cl)", "Sodio (Na)", "Helio (He)", "Hierro (Fe)"], correct: 0 },
+      { q: "¿Qué representa el número atómico (Z)?", options: ["Protones + Neutrones", "Solo Neutrones", "Número de Protones", "Masa total"], correct: 2 }
+    ];
+
+    const BOND_QUESTIONS = [
+      { formula: "NaCl", name: "Cloruro de Sodio", type: "iónico", exp: "Metal (Na) + No Metal (Cl): El sodio cede 1 electrón al cloro para lograr estabilidad, formando iones de diferente carga que se atraen." },
+      { formula: "H₂O", name: "Agua", type: "covalente", exp: "No Metal (H) + No Metal (O): Comparten parejas de electrones para completar sus capas externas de valencia." },
+      { formula: "Fe", name: "Hierro metálico", type: "metálico", exp: "Átomos del mismo Metal: Forman una red cristalina rodeada por una nube/mar de electrones libres deslocalizados." },
+      { formula: "CO₂", name: "Dióxido de Carbono", type: "covalente", exp: "No Metal (C) + No Metal (O): El carbono comparte 4 electrones formando enlaces covalentes dobles con dos oxígenos." },
+      { formula: "NH₃", name: "Amoníaco", type: "puente de hidrógeno", exp: "Interacción entre moléculas: El Hidrógeno (H) unido a un elemento altamente electronegativo (N) atrae electrostáticamente a otras moléculas." }
+    ];
+
+    let currentLang = 'es';
+    let globalScore = 0;
+    let selectedFlaskAtoms = [];
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    let quizIdx = 0;
+    let redQuizIdx = 0;
+    let redScore = 0;
+    let redTimer = 180;
+    let redTimerInterval = null;
+    let currentBondIdx = 0;
+    let currentSpeedMathIdx = 0;
+    let currentSnCard = null;
+    let currentSnMode = 'sym-to-name';
+    let hideOtherMode = false;
+
+    let particles = [];
+    let fxCanvas, fxCtx;
+
+    const TRANSLATIONS = {
+      es: { score: 'PUNTOS:', tabExplorer: '🔍 TABLA 2º ESO', tabCalculator: '🧪 ENSAMBLADOR (Masa u)', tabSpeedmath: '🧮 MINIJUEGO CÁLCULO (.000)', tabSymbolname: '🔤 SÍMBOLO ↔ NOMBRE', tabBonds: '🔗 TIPOS DE ENLACE', tabTheory: '📖 TEORÍA 2º ESO', tabQuiz: '📝 QUIZ EXAMEN', audioOn: '🔊 AUDIO: ON', audioOff: '🔇 AUDIO: OFF' },
+      ca: { score: 'PUNTS:', tabExplorer: '🔍 TAULA 2n ESO', tabCalculator: '🧪 ENSAMBLADOR (Massa u)', tabSpeedmath: '🧮 MINIJOC CÀLCUL (.000)', tabSymbolname: '🔤 SÍMBOL ↔ NOM', tabBonds: '🔗 TIPUS D\'ENLLAÇ', tabTheory: '📖 TEORIA 2n ESO', tabQuiz: '📝 QUIZ EXAMEN', audioOn: '🔊 ÀUDIO: ON', audioOff: '🔇 ÀUDIO: OFF' }
+    };
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+
+      if (type === 'click') {
+        osc.frequency.setValueAtTime(440, now);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'correct') {
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(110, now + 0.15);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+    }
+
+    function switchTab(tabId) {
+      playSound('click');
+      const tabs = ['explorer', 'calculator', 'speedmath', 'symbolname', 'bonds', 'theory', 'quiz', 'finalred'];
+      tabs.forEach(id => {
+        const el = document.getElementById('tab-' + id);
+        const btn = document.getElementById('btn-tab-' + id);
+        if (el) el.classList.add('hidden');
+        if (btn) {
+          btn.classList.remove('bg-yellow-400', 'text-blue-950');
+          btn.classList.add('bg-blue-950', 'text-white');
+        }
+      });
+
+      const targetEl = document.getElementById('tab-' + tabId);
+      const targetBtn = document.getElementById('btn-tab-' + tabId);
+      if (targetEl) targetEl.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.classList.remove('bg-blue-950', 'text-white');
+        targetBtn.classList.add('bg-yellow-400', 'text-blue-950');
+      }
+
+      if (tabId !== 'finalred') {
+        document.body.classList.remove('red-alert-mode');
+        if (redTimerInterval) clearInterval(redTimerInterval);
+      }
+
+      if (tabId === 'explorer') renderPeriodicTable();
+      if (tabId === 'calculator') initCalculator();
+      if (tabId === 'quiz') loadQuizQuestion();
+      if (tabId === 'bonds') loadBondQuestion();
+      if (tabId === 'symbolname') initSymbolNameGame();
+      if (tabId === 'speedmath') initSpeedMathGame();
+    }
+
+    function renderPeriodicTable() {
+      const grid = document.getElementById('periodic-table-grid');
+      if (!grid) return;
+
+      const sortVal = document.getElementById('filter-sort') ? document.getElementById('filter-sort').value : 'asc';
+      const catVal = document.getElementById('filter-cat') ? document.getElementById('filter-cat').value : 'all';
+
+      let list = [...ELEMENTS];
+      if (sortVal === 'desc') list.sort((a, b) => b.z - a.z);
+      else if (sortVal === 'name') list.sort((a, b) => (currentLang === 'ca' ? a.nameCa : a.name).localeCompare(currentLang === 'ca' ? b.nameCa : b.name));
+      else if (sortVal === 'mass') list.sort((a, b) => a.mass - b.mass);
+      else list.sort((a, b) => a.z - b.z);
+
+      grid.innerHTML = '';
+      list.forEach(el => {
+        const isSelectedCat = catVal === 'all' || el.cat === catVal;
+        if (hideOtherMode && !isSelectedCat) return;
+
+        const card = document.createElement('div');
+        const opacityClass = (!isSelectedCat && !hideOtherMode) ? 'opacity-30 scale-95' : 'opacity-100';
+        card.className = `element-card cat-${el.cat} p-2 rounded-lg flex flex-col items-center justify-between h-20 sm:h-24 shadow-md ${opacityClass}`;
+        card.innerHTML = `
+          <div class="w-full flex justify-between items-center text-[10px] font-mono opacity-80">
+            <span>${el.z}</span>
+            <span>${el.mass}</span>
+          </div>
+          <span class="pixel-font text-base sm:text-xl font-bold my-0.5">${el.sym}</span>
+          <span class="text-[9px] sm:text-[10px] font-mono truncate w-full text-center">${currentLang === 'ca' ? el.nameCa : el.name}</span>
+        `;
+        card.onclick = () => {
+          playSound('click');
+          showElementDetail(el);
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    function applyPeriodicFilters() {
+      playSound('click');
+      renderPeriodicTable();
+    }
+
+    function toggleFilterHideMode() {
+      playSound('click');
+      hideOtherMode = !hideOtherMode;
+      const btn = document.getElementById('filter-mode-btn');
+      if (btn) {
+        btn.innerText = hideOtherMode ? 'OCULTAR RESTO' : 'RESALTAR FAMILIA';
+        btn.className = hideOtherMode 
+          ? 'pixel-btn px-3 py-1.5 text-xs font-mono font-bold bg-amber-600 text-white rounded hover:bg-amber-500' 
+          : 'pixel-btn px-3 py-1.5 text-xs font-mono font-bold bg-blue-900 text-white rounded hover:bg-blue-800';
+      }
+      renderPeriodicTable();
+    }
+
+    function showElementDetail(el) {
+      const card = document.getElementById('element-detail-card');
+      if (!card) return;
+      card.classList.remove('hidden');
+      card.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 cat-${el.cat} rounded-xl flex flex-col items-center justify-center border-2 border-yellow-400 font-bold">
+            <span class="text-xs">${el.z}</span>
+            <span class="text-2xl">${el.sym}</span>
+          </div>
+          <div>
+            <h3 class="pixel-font text-yellow-400 text-sm sm:text-base">${currentLang === 'ca' ? el.nameCa : el.name}</h3>
+            <p class="text-xs text-cyan-200 font-mono">Masa Atómica: <strong>${el.mass} u</strong></p>
+            <p class="text-xs text-yellow-300 font-mono">Categoría: <span class="uppercase">${el.cat}</span></p>
+          </div>
+        </div>
+      `;
+    }
+
+    function initCalculator() {
+      const selector = document.getElementById('calculator-element-selector');
+      if (!selector) return;
+      selector.innerHTML = '';
+      ELEMENTS.slice(0, 15).forEach(el => {
+        const btn = document.createElement('button');
+        btn.className = `pixel-btn cat-${el.cat} p-2 rounded text-xs font-bold flex flex-col items-center`;
+        btn.innerHTML = `<span>${el.sym}</span><span class="text-[9px]">${el.mass}u</span>`;
+        btn.onclick = () => {
+          playSound('click');
+          selectedFlaskAtoms.push(el);
+          renderFlask();
+        };
+        selector.appendChild(btn);
+      });
+      renderFlask();
+    }
+
+    function renderFlask() {
+      const container = document.getElementById('flask-atoms-container');
+      const massRes = document.getElementById('molecular-mass-result');
+      if (!container || !massRes) return;
+
+      if (selectedFlaskAtoms.length === 0) {
+        container.innerHTML = '<span class="text-xs text-gray-500 italic">El matraz está vacío. Añade elementos desde la izquierda...</span>';
+        massRes.innerHTML = 'Masa Molecular Total: <strong class="text-yellow-400 text-lg">0 u</strong>';
+        return;
+      }
+
+      container.innerHTML = selectedFlaskAtoms.map(a => `
+        <span class="px-2 py-1 bg-yellow-400 text-blue-950 font-bold text-xs rounded border border-yellow-200 animate-bounce">
+          ${a.sym}
+        </span>
+      `).join('');
+
+      const totalMass = selectedFlaskAtoms.reduce((acc, a) => acc + a.mass, 0).toFixed(2);
+      massRes.innerHTML = `Masa Molecular Total: <strong class="text-yellow-400 text-lg">${totalMass} u</strong>`;
+    }
+
+    function clearFlask() {
+      playSound('click');
+      selectedFlaskAtoms = [];
+      renderFlask();
+    }
+
+    function initSpeedMathGame() {
+      const prob = SPEEDMATH_PROBLEMS[currentSpeedMathIdx];
+      document.getElementById('speedmath-formula').innerText = prob.formula;
+      
+      const details = document.getElementById('speedmath-details');
+      details.innerHTML = `
+        <div class="font-bold text-yellow-300 mb-1">Masa de los componentes (m):</div>
+        ${prob.elements.map(e => `
+          <div class="flex justify-between border-b border-cyan-800/50 py-0.5">
+            <span>• ${e.sym} (${e.count} átomo${e.count > 1 ? 's' : ''}):</span>
+            <span class="text-yellow-400 font-mono">${e.count} × ${e.mass} u = ${(e.count * e.mass).toFixed(3)} u</span>
+          </div>
+        `).join('')}
+      `;
+      document.getElementById('speedmath-user-input').value = '';
+      document.getElementById('speedmath-feedback').innerText = '';
+    }
+
+    function checkSpeedMathAnswer() {
+      const inputEl = document.getElementById('speedmath-user-input');
+      if (!inputEl) return;
+      const val = parseInt(inputEl.value.trim());
+      const prob = SPEEDMATH_PROBLEMS[currentSpeedMathIdx];
+      const fb = document.getElementById('speedmath-feedback');
+
+      if (isNaN(val)) {
+        playSound('wrong');
+        if (fb) {
+          fb.innerText = currentLang === 'ca' ? '⚠️ Si us plau, escriu un número vàlid.' : '⚠️ Por favor, introduce un número válido.';
+          fb.className = 'mt-3 text-sm sm:text-base font-bold text-yellow-400';
+        }
+        return;
+      }
+
+      if (val === prob.rounded) {
+        playSound('correct');
+        if (fb) {
+          fb.innerText = currentLang === 'ca' 
+            ? `¡CORRECTE! Massa aproximada: ${prob.rounded} (.000). +500 PUNTS` 
+            : `¡CORRECTO! Masa aproximada: ${prob.rounded} (.000). +500 PUNTOS`;
+          fb.className = 'mt-3 text-sm sm:text-base font-bold text-green-400';
+        }
+        globalScore += 500;
+        updateScoreDisplay();
+        setTimeout(() => {
+          currentSpeedMathIdx = (currentSpeedMathIdx + 1) % SPEEDMATH_PROBLEMS.length;
+          initSpeedMathGame();
+        }, 1200);
+      } else {
+        playSound('wrong');
+        if (fb) {
+          fb.innerText = currentLang === 'ca' 
+            ? `❌ INCORRECTE. La resposta correcta és ${prob.rounded}.` 
+            : `❌ INCORRECTO. La respuesta correcta es ${prob.rounded}.`;
+          fb.className = 'mt-3 text-sm sm:text-base font-bold text-red-400';
+        }
+      }
+    }
+
+    function initSymbolNameGame() {
+      currentSnCard = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
+      currentSnMode = Math.random() > 0.5 ? 'sym-to-name' : 'name-to-sym';
+
+      const titleEl = document.getElementById('sn-prompt-title');
+      const cardMain = document.getElementById('sn-card-main');
+      const cardSub = document.getElementById('sn-card-sub');
+      const cardNum = document.getElementById('sn-card-num');
+
+      if (currentSnMode === 'sym-to-name') {
+        if (titleEl) titleEl.innerText = currentLang === 'ca' ? '¿QUIN ÉS EL NOM D\'AQUEST ELEMENT?' : '¿CUÁL ES EL NOMBRE DE ESTE ELEMENTO?';
+        cardMain.innerText = currentSnCard.sym;
+        cardSub.innerText = currentLang === 'ca' ? 'Símbol Químic' : 'Símbolo Químico';
+      } else {
+        if (titleEl) titleEl.innerText = currentLang === 'ca' ? '¿QUIN ÉS EL SÍMBOL D\'AQUEST ELEMENT?' : '¿CUÁL ES EL SÍMBOLO DE ESTE ELEMENTO?';
+        cardMain.innerText = currentLang === 'ca' ? currentSnCard.nameCa : currentSnCard.name;
+        cardSub.innerText = currentLang === 'ca' ? 'Nom Químic' : 'Nombre Químico';
+      }
+
+      cardNum.innerText = currentSnCard.z;
+
+      const optsGrid = document.getElementById('sn-options-grid');
+      document.getElementById('sn-feedback').innerText = '';
+      optsGrid.innerHTML = '';
+
+      let options = [currentSnCard];
+      while (options.length < 4) {
+        const rand = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
+        if (!options.includes(rand)) options.push(rand);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'pixel-btn p-3 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-lg border-2 border-yellow-400/50';
+        btn.innerText = currentSnMode === 'sym-to-name' 
+          ? (currentLang === 'ca' ? opt.nameCa : opt.name)
+          : opt.sym;
+        
+        btn.onclick = () => {
+          const feedback = document.getElementById('sn-feedback');
+          if (opt === currentSnCard) {
+            playSound('correct');
+            if (feedback) {
+              feedback.innerText = currentLang === 'ca' ? '¡CORRECTE! +200 PUNTS' : '¡CORRECTO! +200 PUNTOS';
+              feedback.className = 'mt-3 text-sm sm:text-base font-bold text-green-400';
+            }
+            globalScore += 200;
+            updateScoreDisplay();
+            setTimeout(initSymbolNameGame, 800);
+          } else {
+            playSound('wrong');
+            if (feedback) {
+              feedback.innerText = currentLang === 'ca' ? '❌ INCORRECTE' : '❌ INCORRECTO';
+              feedback.className = 'mt-3 text-sm sm:text-base font-bold text-red-400';
+            }
+          }
+        };
+        optsGrid.appendChild(btn);
+      });
+    }
+
+    function checkBondAnswer(answer) {
+      const q = BOND_QUESTIONS[currentBondIdx];
+      const exp = document.getElementById('bond-explanation');
+      if (exp) exp.classList.remove('hidden');
+
+      const isCorrect = answer === q.type;
+      if (isCorrect) {
+        playSound('correct');
+        if (exp) {
+          exp.innerHTML = `
+            <div class="text-green-400 font-bold mb-1">${currentLang === 'ca' ? '¡CORRECTE! (+300 PTS)' : '¡CORRECTO! (+300 PTS)'}</div>
+            <p class="leading-relaxed"><strong>${currentLang === 'ca' ? 'RAO QUÍMICA:' : 'RAZÓN QUÍMICA:'}</strong> ${q.exp}</p>
+          `;
+        }
+        globalScore += 300;
+        updateScoreDisplay();
+      } else {
+        playSound('wrong');
+        if (exp) {
+          exp.innerHTML = `
+            <div class="text-red-400 font-bold mb-1">${currentLang === 'ca' ? 'INCORRECTE. Tipus correcte:' : 'INCORRECTO. Tipo correcto:'} <span class="uppercase underline">${q.type}</span></div>
+            <p class="leading-relaxed"><strong>${currentLang === 'ca' ? 'EXPLICACIÓ:' : 'EXPLICACIÓN:'}</strong> ${q.exp}</p>
+          `;
+        }
+      }
+      const nextBtn = document.getElementById('bond-next-btn');
+      if (nextBtn) nextBtn.classList.remove('hidden');
+    }
+
+    function toggleLanguage() {
+      playSound('click');
+      currentLang = (currentLang === 'es') ? 'ca' : 'es';
+      updateUILanguage();
+      renderPeriodicTable();
+
+      const activeTab = document.querySelector('main > div:not(.hidden)');
+      if (activeTab) {
+        if (activeTab.id === 'tab-symbolname') initSymbolNameGame();
+        if (activeTab.id === 'tab-speedmath') initSpeedMathGame();
+      }
+    }
+
+    function updateScoreDisplay() {
+      const display = document.getElementById('score-display');
+      if (display) display.innerText = globalScore;
+      if (globalScore >= 10000) {
+        const badge = document.getElementById('anti-ai-badge');
+        if (badge) badge.classList.remove('hidden');
+        const hintBtn = document.getElementById('hint-btn-bond');
+        if (hintBtn) hintBtn.classList.remove('hidden');
+      }
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('sound-toggle');
+      if (btn) btn.innerText = soundEnabled ? (TRANSLATIONS[currentLang]?.audioOn || '🔊 AUDIO: ON') : (TRANSLATIONS[currentLang]?.audioOff || '🔇 AUDIO: OFF');
+    }
+
+    function handleStarClick(e) {
+      playSound('click');
+      const star = document.getElementById('star-svg');
+      if (star) {
+        star.classList.remove('star-spin-anim');
+        void star.offsetWidth;
+        star.classList.add('star-spin-anim');
+      }
+      spawnParticles(e.clientX || window.innerWidth / 2, e.clientY || 80, '#ffcc00');
+    }
+
+    function handleRedStarClick(e) {
+      playSound('click');
+      const star = document.getElementById('red-star-svg');
+      if (star) {
+        star.classList.remove('star-spin-anim');
+        void star.offsetWidth;
+        star.classList.add('star-spin-anim');
+      }
+      spawnParticles(e.clientX || window.innerWidth / 2, e.clientY || 80, '#ff2222');
+    }
+
+    function spawnParticles(x, y, color) {
+      if (!fxCtx) return;
+      for (let i = 0; i < 25; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 2;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: Math.random() * 5 + 3,
+          color: color,
+          alpha: 1,
+          life: 30 + Math.random() * 20
+        });
+      }
+    }
+
+    function initFxCanvas() {
+      fxCanvas = document.getElementById('fxCanvas');
+      if (!fxCanvas) return;
+      fxCtx = fxCanvas.getContext('2d');
+      
+      function resize() {
+        if (!fxCanvas) return;
+        fxCanvas.width = window.innerWidth;
+        fxCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function loop() {
+        if (!fxCtx || !fxCanvas) return;
+        fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 1 / p.life;
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+          fxCtx.save();
+          fxCtx.globalAlpha = Math.max(0, p.alpha);
+          fxCtx.fillStyle = p.color;
+          fxCtx.beginPath();
+          fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          fxCtx.fill();
+          fxCtx.restore();
+        }
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function loadQuizQuestion() {
+      const q = QUIZ_QUESTIONS[quizIdx];
+      const qNum = document.getElementById('quiz-question-num');
+      const qText = document.getElementById('quiz-question-text');
+      const opts = document.getElementById('quiz-options-container');
+      const fb = document.getElementById('quiz-feedback');
+      const bar = document.getElementById('quiz-progress-bar');
+
+      if (qNum) qNum.innerText = `${currentLang === 'ca' ? 'PREGUNTA' : 'PREGUNTA'} ${quizIdx + 1} DE ${QUIZ_QUESTIONS.length}`;
+      if (qText) qText.innerText = q.q;
+      if (fb) fb.innerText = '';
+      if (bar) bar.style.width = `${((quizIdx + 1) / QUIZ_QUESTIONS.length) * 100}%`;
+
+      if (opts) {
+        opts.innerHTML = '';
+        q.options.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'pixel-btn p-4 bg-blue-900 hover:bg-blue-800 text-white font-mono font-bold text-xs sm:text-sm rounded-xl border-2 border-yellow-400/50 shadow-md text-left transition-all';
+          btn.innerText = opt;
+          btn.onclick = () => {
+            if (idx === q.correct) {
+              playSound('correct');
+              if (fb) {
+                fb.innerText = currentLang === 'ca' ? '¡CORRECTE! +500 PUNTS' : '¡CORRECTO! +500 PUNTOS';
+                fb.className = 'mt-6 text-base sm:text-lg font-bold text-green-400';
+              }
+              globalScore += 500;
+              updateScoreDisplay();
+              setTimeout(() => {
+                quizIdx = (quizIdx + 1) % QUIZ_QUESTIONS.length;
+                loadQuizQuestion();
+              }, 1000);
+            } else {
+              playSound('wrong');
+              if (fb) {
+                fb.innerText = currentLang === 'ca' ? `❌ INCORRECTE. La resposta era: ${q.options[q.correct]}` : `❌ INCORRECTO. La respuesta era: ${q.options[q.correct]}`;
+                fb.className = 'mt-6 text-base sm:text-lg font-bold text-red-400';
+              }
+            }
+          };
+          opts.appendChild(btn);
+        });
+      }
+    }
+
+    function loadBondQuestion() {
+      const q = BOND_QUESTIONS[currentBondIdx];
+      const qNum = document.getElementById('bond-question-num');
+      const formula = document.getElementById('bond-formula');
+      const name = document.getElementById('bond-name');
+      const exp = document.getElementById('bond-explanation');
+      const nextBtn = document.getElementById('bond-next-btn');
+
+      if (qNum) qNum.innerText = `${currentLang === 'ca' ? 'PREGUNTA' : 'PREGUNTA'} ${currentBondIdx + 1} DE ${BOND_QUESTIONS.length}`;
+      if (formula) formula.innerText = q.formula;
+      if (name) name.innerText = q.name;
+      if (exp) exp.classList.add('hidden');
+      if (nextBtn) nextBtn.classList.add('hidden');
+    }
+
+    function loadNextBondQuestion() {
+      currentBondIdx = (currentBondIdx + 1) % BOND_QUESTIONS.length;
+      loadBondQuestion();
+    }
+
+    function useHint(type) {
+      playSound('click');
+      if (type === 'bonds') {
+        const q = BOND_QUESTIONS[currentBondIdx];
+        alert(currentLang === 'ca' 
+          ? `💡 PISTA DE LA SALLE: La resposta correcta comença per la lletra '${q.type[0].toUpperCase()}'!`
+          : `💡 PISTA DE LA SALLE: La respuesta correcta empieza con la letra '${q.type[0].toUpperCase()}'!`);
+      }
+    }
+
+    function startRedAlertFinalGame() {
+      switchTab('finalred');
+      document.body.classList.add('red-alert-mode');
+
+      redQuizIdx = 0;
+      redScore = 0;
+      redTimer = 180;
+
+      const timerDisplay = document.getElementById('red-timer-display');
+      if (timerDisplay) timerDisplay.innerText = `${redTimer}s`;
+
+      if (redTimerInterval) clearInterval(redTimerInterval);
+      redTimerInterval = setInterval(() => {
+        redTimer--;
+        if (timerDisplay) timerDisplay.innerText = `${redTimer}s`;
+        if (redTimer <= 0) {
+          clearInterval(redTimerInterval);
+          finishRedExam(false);
+        }
+      }, 1000);
+
+      loadRedQuizQuestion();
+    }
+
+    function loadRedQuizQuestion() {
+      if (redQuizIdx >= RED_EXAM_QUESTIONS.length) {
+        finishRedExam(true);
+        return;
+      }
+
+      const q = RED_EXAM_QUESTIONS[redQuizIdx];
+      const qNum = document.getElementById('red-quiz-num');
+      const qText = document.getElementById('red-quiz-question-text');
+      const opts = document.getElementById('red-quiz-options');
+      const fb = document.getElementById('red-quiz-feedback');
+
+      if (qNum) qNum.innerText = `PREGUNTA HARDCORE ${redQuizIdx + 1} DE ${RED_EXAM_QUESTIONS.length}`;
+      if (qText) qText.innerText = q.q;
+      if (fb) fb.innerText = '';
+
+      if (opts) {
+        opts.innerHTML = '';
+        q.options.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'pixel-btn p-4 bg-red-950 hover:bg-red-900 text-white font-mono font-bold text-xs sm:text-sm rounded-xl border-2 border-red-500 shadow-lg text-left';
+          btn.innerText = opt;
+          btn.onclick = () => {
+            if (idx === q.correct) {
+              playSound('correct');
+              if (fb) {
+                fb.innerText = '¡CORRECTO!';
+                fb.className = 'mt-6 text-base font-bold text-green-400';
+              }
+              redScore++;
+            } else {
+              playSound('wrong');
+              if (fb) {
+                fb.innerText = '❌ INCORRECTO';
+                fb.className = 'mt-6 text-base font-bold text-red-400';
+              }
+            }
+            setTimeout(() => {
+              redQuizIdx++;
+              loadRedQuizQuestion();
+            }, 800);
+          };
+          opts.appendChild(btn);
+        });
+      }
+    }
+
+    function finishRedExam(completed) {
+      if (redTimerInterval) clearInterval(redTimerInterval);
+
+      const results = document.getElementById('red-exam-results');
+      const title = document.getElementById('red-result-title');
+      const score = document.getElementById('red-result-score');
+      const msg = document.getElementById('red-result-msg');
+      const icon = document.getElementById('red-result-icon');
+
+      if (results) results.classList.remove('hidden');
+
+      const pct = Math.round((redScore / RED_EXAM_QUESTIONS.length) * 100);
+
+      if (pct >= 50 && completed) {
+        if (icon) icon.innerText = '🏆';
+        if (title) title.innerText = currentLang === 'ca' ? '¡EXAMEN SUPERAT!' : '¡EXAMEN SUPERADO!';
+        if (score) score.innerText = `NOTA: ${redScore} / ${RED_EXAM_QUESTIONS.length} (${pct}%)`;
+        if (msg) msg.innerText = currentLang === 'ca' ? '¡Felicitats! Has après i desblocat l\'Estrella Vermella de La Salle.' : '¡Felicidades! Has aprobado y desbloqueado la Estrella Roja de La Salle.';
+        
+        const redStar = document.getElementById('red-star-btn');
+        if (redStar) redStar.classList.remove('hidden');
+      } else {
+        if (icon) icon.innerText = '💀';
+        if (title) title.innerText = currentLang === 'ca' ? 'EXAMEN SUSPÈS' : 'EXAMEN SUSPENDIDO';
+        if (score) score.innerText = `NOTA: ${redScore} / ${RED_EXAM_QUESTIONS.length} (${pct}%)`;
+        if (msg) msg.innerText = currentLang === 'ca' ? 'Has suspès l\'Examen Final. El joc es reiniciarà...' : 'Has suspendido el Examen Final. El juego se reiniciará...';
+      }
+    }
+
+    function finishRedExamFlow() {
+      const results = document.getElementById('red-exam-results');
+      if (results) results.classList.add('hidden');
+      switchTab('explorer');
+    }
+
+    function updateUILanguage() {
+      const t = TRANSLATIONS[currentLang];
+      if (!t) return;
+
+      const langText = document.getElementById('lang-text');
+      if (langText) langText.innerText = currentLang === 'es' ? 'ES ➔ CA' : 'CA ➔ ES';
+      const lblScore = document.getElementById('lbl-score');
+      if (lblScore) lblScore.innerText = t.score;
+
+      const tabMap = {
+        'btn-tab-explorer': t.tabExplorer,
+        'btn-tab-calculator': t.tabCalculator,
+        'btn-tab-speedmath': t.tabSpeedmath,
+        'btn-tab-symbolname': t.tabSymbolname,
+        'btn-tab-bonds': t.tabBonds,
+        'btn-tab-theory': t.tabTheory,
+        'btn-tab-quiz': t.tabQuiz
+      };
+
+      for (const [btnId, text] of Object.entries(tabMap)) {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.innerText = text;
+      }
+    }
+
+    window.onload = function() {
+      initFxCanvas();
+      renderPeriodicTable();
+      updateScoreDisplay();
+    };
+  </script>
+</body>
+</html>
